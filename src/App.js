@@ -1,38 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { auth } from './firebase';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Cursor from './components/cursor/Cursor';
 import LoadingScreen from './components/loading/LoadingScreen';
 import Login from './pages/login/Login';
 import Signup from './pages/signup/Signup';
-import Home from './pages/home/Home'; 
+import AdminHome from './pages/admin/adminHome/AdminHome';
+import UserHome from './pages/client/userHome/UserHome';
+import PrivateRoute from './components/PrivateRoute/PrivateRoute'; 
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-      setLoading(false);
-    });
+    const animationDuration = 5000;
+    const timer = setTimeout(() => {
+      setShowLoadingScreen(false);
+    }, animationDuration);
 
-    return () => unsubscribe(); 
+    return () => clearTimeout(timer);
   }, []);
 
   return (
-    <BrowserRouter> 
-      {/* LoadingScreen dentro do BrowserRouter */}
-      {loading ? ( 
-        <LoadingScreen /> 
-      ) : (
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/cadastro" element={<Signup />} />
-          <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
-          {/* ... outras rotas ... */}
-        </Routes>
+    <div>
+      <Cursor />
+      {showLoadingScreen && <LoadingScreen />}
+      {!showLoadingScreen && (
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/cadastro" element={<Signup />} />
+            <Route path="/admin" element={<PrivateRoute role="admin"><AdminHome /></PrivateRoute>} />
+            <Route path="/" element={<PrivateRoute role="user"><UserHome /></PrivateRoute>} />
+          </Routes>
+        </BrowserRouter>
       )}
-    </BrowserRouter>
+    </div>
   );
 }
 

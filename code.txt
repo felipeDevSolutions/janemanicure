@@ -1,0 +1,846 @@
+jane-manicure
+
+├── public
+│   └── index.html
+└── src
+    ├── components
+    │   ├── cursor
+    │   │   ├── Cursor.css
+    │   │   └── Cursor.jsx
+    │   └── loading
+    │       ├── LoadingScreen.css
+    │       └── LoadingScreen.jsx
+    ├── context
+    │   ├── AuthContext.js
+    │   └── AuthReducer.js
+    ├── models
+    │   └── User.js
+    ├── pages
+    │   ├── home
+    │   │   └── Home.jsx
+    │   ├── login
+    │   │   ├── Login.css
+    │   │   └── Login.jsx
+    │   └── signup
+    │       ├── Signup.css
+    │       └── Signup.jsx
+    └── static 
+        ├── img
+        │   ├── Jane.png
+        │   └── logo.png
+        └── video
+            └── janeVideo.mp4 
+    ├── App.css
+    ├── App.js
+    ├── firebase.js
+    ├── index.css
+    └── index.js
+├── .env.local 
+├── .gitignore
+├── package.json
+├── package-lock.json
+└── README.md
+
+
+=============================================================================================
+
+
+// src/firebase.js
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+
+const firebaseConfig = {
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app); 
+export const auth = getAuth(app); 
+export default app;
+
+
+=============================================================================================
+
+
+index.html:
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+    <title>React App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
+
+
+=============================================================================================
+
+index.js:
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+
+=============================================================================================
+
+
+App.js:
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { auth } from './firebase';
+import Cursor from './components/cursor/Cursor'; // Importe o componente Cursor
+import LoadingScreen from './components/loading/LoadingScreen';
+import Login from './pages/login/Login';
+import Signup from './pages/signup/Signup';
+import Home from './pages/home/Home'; 
+
+function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    return () => unsubscribe(); 
+  }, []);
+
+  return (
+    <div> {/* Renderize o Cursor aqui */}
+      <Cursor /> 
+      <BrowserRouter> 
+        {loading ? ( 
+          <LoadingScreen /> 
+        ) : (
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/cadastro" element={<Signup />} />
+            <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
+            {/* ... outras rotas ... */}
+          </Routes>
+        )}
+      </BrowserRouter>
+    </div>
+  );
+}
+
+export default App;
+
+
+=============================================================================================
+
+
+App.css:
+* {
+  padding: 0;
+  margin: 0;
+}
+
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+
+=============================================================================================
+
+
+User.js:
+class User {
+    constructor(id, nome, email, senha, role = 'user', ativo = true) {
+      this.id = id;
+      this.nome = nome;
+      this.email = email;
+      this.senha = senha; // Armazene a senha com hash, nunca em texto plano!
+      this.role = role; // 'admin' ou 'user'
+      this.ativo = ativo; 
+    }
+}
+  
+export default User;
+
+
+=============================================================================================
+
+
+
+Cursor.jsx:
+import React, { useEffect, useRef } from 'react';
+import './Cursor.css';
+
+const Cursor = () => {
+  // 1. Cria uma referência para o elemento canvas.
+  const canvasRef = useRef(null);
+
+  // 2. useEffect para configurar o canvas e os listeners de eventos.
+  useEffect(() => {
+    // 2.1 Obtém o elemento canvas da referência.
+    const canvas = canvasRef.current;
+    // 2.2 Obtém o contexto 2D do canvas para desenhar.
+    const ctx = canvas.getContext('2d');
+
+    // 2.3 Define a posição inicial do ponteiro (centro da tela).
+    const pointer = {
+      x: 0.5 * window.innerWidth,
+      y: 0.5 * window.innerHeight,
+    };
+
+    // 2.4 Define os parâmetros da animação.
+    const params = {
+      pointsNumber: 25,  // Número de pontos na trilha do cursor
+      widthFactor: 0.3, // Fator de largura da linha
+      mouseThreshold: 0.6, // Limiar de movimento do mouse
+      spring: 0.4,        // Intensidade da mola (efeito de "puxão")
+      friction: 0.5,      // Fricção (resistência ao movimento)
+    };
+
+    // 2.5 Cria a trilha do cursor como um array de pontos.
+    const trail = new Array(params.pointsNumber);
+    for (let i = 0; i < params.pointsNumber; i++) {
+      trail[i] = {
+        x: pointer.x,
+        y: pointer.y,
+        dx: 0,
+        dy: 0,
+      };
+    }
+
+    // 2.6 Função para atualizar a posição do ponteiro.
+    const updateMousePosition = (eX, eY) => {
+      pointer.x = eX;
+      pointer.y = eY;
+    };
+
+    // 2.7 Função para configurar o canvas (definir largura e altura).
+    const setupCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    // 2.8 Define as funções de manipulação de eventos DENTRO do useEffect
+    const handleMouseClick = (e) => {
+      updateMousePosition(e.pageX, e.pageY);
+    };
+
+    const handleMouseMove = (e) => {
+      updateMousePosition(e.pageX, e.pageY);
+    };
+
+    const handleTouchMove = (e) => {
+      updateMousePosition(e.targetTouches[0].pageX, e.targetTouches[0].pageY);
+    };
+
+    // 2.9 Função para animar o cursor.
+    const animate = () => {
+      // 2.9.1 Limpa o canvas a cada frame.
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 2.9.2 Atualiza a posição de cada ponto na trilha.
+      trail.forEach((p, pIdx) => {
+        const prev = pIdx === 0 ? pointer : trail[pIdx - 1]; // Define o ponto anterior
+        const spring = pIdx === 0 ? 0.4 * params.spring : params.spring; // Ajuste para o primeiro ponto
+        p.dx += (prev.x - p.x) * spring; // Calcula a diferença horizontal (x)
+        p.dy += (prev.y - p.y) * spring; // Calcula a diferença vertical (y)
+        p.dx *= params.friction; // Aplica a fricção à velocidade horizontal
+        p.dy *= params.friction; // Aplica a fricção à velocidade vertical
+        p.x += p.dx; // Atualiza a posição horizontal
+        p.y += p.dy; // Atualiza a posição vertical
+
+        // 2.9.3 Ajusta a posição do primeiro ponto para centralizar o cursor.
+        if (pIdx === 0) {
+          p.x = pointer.x - ctx.lineWidth / 2;
+          p.y = pointer.y - ctx.lineWidth / 2;
+        }
+      });
+
+      // 2.9.4 Define o estilo da linha.
+      ctx.lineCap = 'round'; // Ponta arredondada
+      ctx.strokeStyle = '#e5b75a'; // Cor do cursor
+
+      // 2.9.5 Inicia o desenho do cursor.
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x, trail[0].y); // Move para o primeiro ponto
+
+      // 2.9.6 Desenha a trilha do cursor.
+      for (let i = 1; i < trail.length - 1; i++) {
+        const xc = 0.5 * (trail[i].x + trail[i + 1].x);
+        const yc = 0.5 * (trail[i].y + trail[i + 1].y);
+        ctx.quadraticCurveTo(trail[i].x, trail[i].y, xc, yc); // Desenha a curva
+        ctx.lineWidth = params.widthFactor * (params.pointsNumber - i); // Largura da linha
+        ctx.stroke(); // Desenha a linha
+      }
+
+      // 2.9.7 Desenha a última linha até o último ponto da trilha.
+      ctx.lineTo(trail[trail.length - 1].x, trail[trail.length - 1].y);
+      ctx.stroke();
+
+      // 2.9.8 Agenda a próxima chamada da função animate (loop de animação).
+      requestAnimationFrame(animate);
+    };
+
+    // 2.10 Configura o canvas e inicia a animação.
+    setupCanvas();
+    animate();
+
+    // 2.11 Adiciona os listeners de eventos.
+    window.addEventListener('click', handleMouseClick);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('resize', setupCanvas);
+
+    // 2.12 Remove os listeners de eventos quando o componente desmontar.
+    return () => {
+      window.removeEventListener('click', handleMouseClick);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('resize', setupCanvas);
+    };
+  }, []); // Executa o useEffect apenas uma vez, quando o componente é montado.
+
+  // 3. Renderiza o canvas.
+  return <canvas ref={canvasRef} id="cursorCanvas" />; 
+};
+
+export default Cursor;
+
+
+=============================================================================================
+
+
+Cursor.css:
+#cursorCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999; /* Certifique-se de que o canvas fique acima de outros elementos */
+    pointer-events: none; /* Impede que o canvas interfira com cliques */
+  }
+  
+  /* Esconde o cursor padrão do mouse */
+  * {
+    cursor: none;
+  }
+
+
+=============================================================================================
+
+
+Loading.jsx:
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './LoadingScreen.css'; // Importe o arquivo CSS da animação
+
+function LoadingScreen() {
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Simula um tempo de carregamento (ajuste conforme necessário)
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/login'); // Redireciona para a página de login
+    }, 8000); // Substitua 3000 pelo tempo desejado em milissegundos
+  }, [navigate]); 
+
+  return (
+    <div className={`loading-screen ${loading ? 'active' : ''}`}>
+      <video autoPlay muted className="logo-animation"> 
+        <source src="/janeVideo.mp4" type="video/mp4" /> 
+        Seu navegador não suporta o elemento de vídeo.
+      </video>
+    </div>
+  );
+}
+
+export default LoadingScreen;
+
+
+=============================================================================================
+
+
+Loading.css:
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease-in-out; /* Adiciona uma transição suave */
+    opacity: 1; /* Inicialmente visível */
+  }
+  
+  .loading-screen.active {
+    opacity: 0; /* Torna transparente quando a animação termina */
+  }
+  
+  .logo-animation {
+    /* Estilos da logo, ajuste conforme necessário */
+    width: 200px;
+    animation: spin 2s linear infinite; /* Animação de rotação */
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+
+=============================================================================================
+
+
+Login.jsx:
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../firebase';
+import './Login.css';
+import Logo from '../../static/img/logo.png';
+
+function Login() {
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [erro, setErro] = useState(null);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErro(null);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, senha);
+      navigate('/');
+    } catch (error) {
+      setErro(error.message);
+    }
+  };
+
+  return (
+    <div className="auth-container">
+      <div className="auth-card">
+        <img src={Logo} alt="Logo do Salão" className="logo" />
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="webflow-style-input">
+            <input
+              type="email"
+              id="email"
+              placeholder="Digite seu email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="webflow-style-input">
+            <input
+              type="password"
+              id="senha"
+              placeholder="Digite sua senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+            />
+          </div>
+          {erro && <p className="error-message">{erro}</p>}
+          <button type="submit" className="btn-auth">
+            Entrar
+          </button>
+          <div className="auth-links">
+            <Link to="/esqueci-senha">Esqueci a senha</Link>
+            <Link to="/cadastro">Criar conta</Link>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default Login;
+
+
+=============================================================================================
+
+
+Login.css:
+.auth-container {
+  background-color: #000;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.auth-card {
+  background-color: #000;
+  border-radius: 20px;
+  box-shadow: 0px 0px 20px rgba(238, 201, 77, 0.8);
+  padding: 0 30px 30px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+
+.logo {
+  width: 100%;
+  margin-bottom: 30px;
+  top: 0;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.webflow-style-input {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  border-radius: 2px;
+  padding: 0;
+  background: rgb(122, 118, 98, 0.8);
+
+  &:after {
+    content: "";
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    z-index: 999;
+    height: 2px;
+    border-bottom-left-radius: 2px;
+    border-bottom-right-radius: 2px;
+    background-position: 0% 0%;
+    background: linear-gradient(to right, #d48d45, #b8712d, #d4ae4b, #c88c0b, #b8712d, #b2933f);
+    background-size: 500% auto;
+    animation: gradient 5s linear infinite;
+  }
+}
+
+.webflow-style-input input {
+  flex-grow: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #d7bd79;
+  font-size: 1rem;
+  width: 100%;
+  line-height: 1rem;
+  padding: 10px;
+  vertical-align: middle;
+
+  &::placeholder {
+    /* Placeholder style */
+    color: #d7bc7976;
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  100% {
+    background-position: 100% 0%;
+  }
+}
+
+
+.btn-auth {
+  padding: 12px;
+  border: none;
+  border-radius: 5px;
+  background-color: #daa520;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: 20px;
+  font-size: 1rem;
+}
+
+.btn-auth:hover {
+  background-color: #c88c0b;
+}
+
+.auth-links {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-around;
+  font-size: 1rem;
+}
+
+.auth-links a {
+  color: #daa520;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.auth-links a:hover {
+  color: #c88c0b;
+}
+
+.error-message {
+  color: #f00;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+/* Responsividade para Tablets */
+@media (max-width: 834px) { 
+
+  .auth-card {
+    padding: 0 20px 20px;
+    max-width: 80%;
+    border-radius: none;
+    box-shadow: none;
+  }
+  
+  .webflow-style-input {
+    padding: 0px; /* Reduz o padding do input */
+  }
+  .webflow-style-input input {
+    font-size: 1.5rem; /* Reduz o tamanho da fonte */
+    line-height: 2.5rem;
+  }
+
+  .btn-auth{
+    font-size: 1.5rem;
+  }
+
+  .auth-links{
+    margin-top: 40px;
+    margin-bottom: 30px;
+    font-size: 1.5rem;
+  }
+}
+
+/* Responsividade para Celulares */
+@media (max-width: 320px) {
+  .auth-card {
+    padding: 0 10px 10px;
+    max-width: 85%;
+    width: 100%;
+    border-radius: none;
+    box-shadow: none;
+  }
+  
+  .webflow-style-input {
+    padding: 0px; /* Reduz o padding do input */
+  }
+  .webflow-style-input input {
+    font-size: 1.3rem; /* Reduz o tamanho da fonte */
+    line-height: 1.2rem;
+  }
+
+  .btn-auth{
+    font-size: 1.3rem;
+  }
+
+  .auth-links{
+    margin-top: 40px;
+    margin-bottom: 30px;
+    font-size: 1.3rem;
+  }
+}
+
+/* Responsividade para Celulares */
+@media (max-width: 414px){
+  .auth-card {
+    padding: 0 10px 10px;
+    max-width: 90%;
+    width: 100%;
+    border-radius: none;
+    box-shadow: none;
+  }
+  
+  .webflow-style-input {
+    padding: 0px; /* Reduz o padding do input */
+  }
+  .webflow-style-input input {
+    font-size: 1.3rem; /* Reduz o tamanho da fonte */
+    line-height: 1.5rem;
+  }
+
+  .btn-auth{
+    font-size: 1.3rem;
+  }
+
+  .auth-links{
+    margin-top: 40px;
+    margin-bottom: 30px;
+    font-size: 1.3rem;
+  }
+}
+
+
+=============================================================================================
+
+
+Signup.jsx:
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { db, auth } from '../../firebase';
+import { doc, setDoc } from "firebase/firestore";
+import User from '../../models/User';
+import './Signup.css';
+import Logo from '../../static/img/logo.png';
+
+function Signup() {
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [erro, setErro] = useState(null);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErro(null);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
+      const user = userCredential.user;
+
+      const novoUsuario = new User(user.uid, nome, email, null, 'user', true);
+      await setDoc(doc(db, "usuarios", user.uid), { ...novoUsuario });
+
+      await sendEmailVerification(user);
+      navigate('/login');
+    } catch (error) {
+      setErro(error.message);
+    }
+  };
+
+  return (
+    <div className="auth-container">
+      <div className="auth-card">
+        <img src={Logo} alt="Logo do Salão" className="logo" />
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="webflow-style-input"> 
+            <input
+              type="text"
+              id="nome"
+              placeholder="Digite seu nome" 
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              required
+            />
+          </div>
+          <div className="webflow-style-input"> 
+            <input
+              type="email"
+              id="email"
+              placeholder="Digite seu email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="webflow-style-input">
+            <input
+              type="password"
+              id="senha"
+              placeholder="Digite sua senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+            />
+          </div>
+          {erro && <p className="error-message">{erro}</p>}
+          <button type="submit" className="btn-auth">
+            Cadastrar
+          </button>
+          <div className="auth-links">
+            <Link to="/login">Já possui conta? Faça login</Link>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default Signup;
+
+
+=============================================================================================
+
+
+Signup.css:
+/* Importa o CSS do Login */
+@import url('../login/Login.css');
+
+
+
+=============================================================================================
+
+

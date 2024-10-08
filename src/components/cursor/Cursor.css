@@ -1,0 +1,12 @@
+#cursorCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999; /* Certifique-se de que o canvas fique acima de outros elementos */
+    pointer-events: none; /* Impede que o canvas interfira com cliques */
+  }
+  
+  /* Esconde o cursor padrão do mouse */
+  * {
+    cursor: none;
+  }

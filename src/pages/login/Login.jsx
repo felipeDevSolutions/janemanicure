@@ -28,25 +28,25 @@ function Login() {
       <div className="auth-card">
         <img src={Logo} alt="Logo do Salão" className="logo" />
         <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
+          <div className="webflow-style-input">
             <input
               type="email"
               id="email"
+              placeholder="Digite seu email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            <label htmlFor="email">Email:</label>
           </div>
-          <div className="form-group">
+          <div className="webflow-style-input">
             <input
               type="password"
               id="senha"
+              placeholder="Digite sua senha"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               required
             />
-            <label htmlFor="senha">Senha:</label>
           </div>
           {erro && <p className="error-message">{erro}</p>}
           <button type="submit" className="btn-auth">
